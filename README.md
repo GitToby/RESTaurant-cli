@@ -131,9 +131,19 @@ Some requests failed.
 
 ## Configuration File Format
 
+**Schema Generation** - RESTurant can generate a JSON schema for your collection files:
+
+```bash
+# Generate schema
+restaurant gen-schema > .request_collection_schema.json
+```
+
+
 The `.rest.yml` file structure:
 
 ```yaml
+# yaml-language-server: $schema=path/to/.request_collection_schema.json
+
 # Collection metadata
 title: "API Collection Title"
 description: "Description of this collection"
@@ -157,14 +167,7 @@ requests:
     soft_timeout_s: 5.0                   # Timeout in seconds
 ```
 
-## Schema Generation
 
-RESTurant can generate a JSON schema for your collection files:
-
-```bash
-# Generate schema
-restaurant gen-schema > .request_collection_schema.json
-```
 
 This schema can be used with editor extensions like VS Code's YAML Language Server for validation and autocompletion.
 

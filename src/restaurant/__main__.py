@@ -1,5 +1,4 @@
 import glob
-import json
 import os
 from pathlib import Path
 from cyclopts import App
@@ -61,9 +60,7 @@ def gen_schema():
     Use in the yml file to validate the request collection schema:
     `# yaml-language-server: $schema=<pathToTheSchema>/.request_collection_schema.json`
     """
-    print("Generating schema...")
-    with open(".request_collection_schema.json", "w") as f:
-        json.dump(RequestCollection.model_json_schema(), f)
+    print(RequestCollection.model_json_schema())
 
 
 def main():
