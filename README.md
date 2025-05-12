@@ -90,29 +90,43 @@ restaurant run
 When you run the command, RESTurant will scan for `.rest.yml` files and execute the requests in them:
 
 ```
-No input files provided, scanning for files in `/Users/toby/dev/projects/RESTaurant/**/*.rest.yml`
-Found 3 collection files.
-[1/3] Loading /Users/toby/dev/projects/RESTaurant/resources/github.rest.yml... Done.
-[1/3] GitHub API Collection
-[1/3] Running 4 requests...
-[1/3] ✅ GET https://api.github.com/users/octocat 200 (0:00:00.056743)
-[1/3] ✅ GET https://api.github.com/zen 200 (0:00:00.055040)
-[1/3] ✅ GET https://api.github.com/repos/octocat/hello-world 200 (0:00:00.054677)
-[1/3] ❌ GET https://api.github.com/search/repositories 422 expected 403 (0:00:00.066147)
-[2/3] Loading /Users/toby/dev/projects/RESTaurant/resources/example.rest.yml... Done.
-[2/3] Example REST API testing
-[2/3] Running 3 requests...
-[2/3] ✅ GET https://api.ipify.org/ 200 (0:00:00.119540)
-[2/3] ❌ POST https://api.ipify.org/ 520 expected 403 (0:00:00.468796)
-[2/3] ✅ GET https://pastebin.com/favicon.ico 200 (0:00:00.062359)
-[3/3] Loading /Users/toby/dev/projects/RESTaurant/resources/jsonplaceholder.rest.yml... Done.
-[3/3] JSON Placeholder API Collection
-[3/3] Running 5 requests...
-[3/3] ✅ GET https://jsonplaceholder.typicode.com/posts 200 (0:00:00.064326)
-[3/3] ✅ GET https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.062546)
-[3/3] ✅ POST https://jsonplaceholder.typicode.com/posts 201 (0:00:00.296911)
-[3/3] ✅ PUT https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.143119)
-[3/3] ✅ DELETE https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.145088)
+No input files provided, scanning for files in `/Users/toby/dev/projects/restaurant/**/*.rest.yml`
+Found 4 collection files.
+
+[1/4] Loading /Users/toby/dev/projects/restaurant/resources/github.rest.yml... Done.
+[1/4] GitHub API Collection
+[1/4] Running 4 requests...
+[1/4] ✅ GET      https://api.github.com/users/octocat 200 (0:00:00.199333)
+[1/4] ✅ GET      https://api.github.com/zen 200 (0:00:00.181543)
+[1/4] ✅ GET      https://api.github.com/repos/octocat/hello-world 200 (0:00:00.206547)
+[1/4] ❌ GET      https://api.github.com/search/repositories 422 expected 200  (0:00:00.183207)
+
+[2/4] Loading /Users/toby/dev/projects/restaurant/resources/openweather.rest.yml... Done.
+[2/4] OpenWeatherMap API Collection
+[2/4] Running 3 requests...
+[2/4] ❌ GET      https://api.openweathermap.org/data/2.5/weather 401 expected 200  (0:00:00.122748)
+[2/4] ❌ GET      https://api.openweathermap.org/data/2.5/forecast 401 expected 200  (0:00:00.119949)
+[2/4] ❌ GET      https://api.openweathermap.org/data/2.5/air_pollution 401 expected 200  (0:00:00.127203)
+
+[3/4] Loading /Users/toby/dev/projects/restaurant/resources/example.rest.yml... Done.
+[3/4] Basic API Tests Collection
+[3/4] Running 5 requests...
+[3/4] ✅ GET      https://api.ipify.org/ 200 (0:00:00.140074)
+[3/4] ❌ POST     https://api.ipify.org/ 520 expected 403  (0:00:00.350254)
+[3/4] ✅ GET      https://pastebin.com/favicon.ico 200 (0:00:00.081860)
+[3/4] ❌ GET      https://mockbin.org/bin/create 404 expected 2xx  (0:00:00.288823)
+[3/4] ❌ POST     https://postb.in/api/bin 301 expected 200  (0:00:00.077875)
+
+[4/4] Loading /Users/toby/dev/projects/restaurant/resources/jsonplaceholder.rest.yml... Done.
+[4/4] JSON Placeholder API Collection
+[4/4] Running 5 requests...
+[4/4] ✅ GET      https://jsonplaceholder.typicode.com/posts 200 (0:00:00.075812)
+[4/4] ✅ GET      https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.075952)
+[4/4] ✅ POST     https://jsonplaceholder.typicode.com/posts 201 (0:00:00.308094)
+[4/4] ✅ PUT      https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.314894)
+[4/4] ✅ DELETE   https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.312959)
+
+Some requests failed.
 ```
 
 ## Configuration File Format
