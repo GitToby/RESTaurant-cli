@@ -1,0 +1,27 @@
+[project]
+name = "RESTaurant"
+dynamic = ["version"]
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cyclopts>=3.16.0",
+    "httpx>=0.28.1",
+    "pydantic>=2.11.4",
+    "pyyaml>=6.0.2",
+]
+
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pyright>=1.1.400",
+    "ruff>=0.11.9",
+]
+
+[project.scripts]
+RESTaurant = "restaurant.__main__:main"
+rest = "restaurant.__main__:main"

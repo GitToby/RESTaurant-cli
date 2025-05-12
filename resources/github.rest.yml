@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../.request_collection_schema.json
+
+title: "GitHub API Collection"
+description: "A collection of example requests for the GitHub API"
+headers:
+  Accept: "application/vnd.github.v3+json"
+  User-Agent: "API-Test-Client"
+
+requests:
+  getUserProfile:
+    method: GET
+    url: "https://api.github.com/users/octocat"
+    assert:
+      status_code: 200
+      soft_timeout_s: 3.0
+
+  getZenMessage:
+    method: GET
+    url: "https://api.github.com/zen"
+    assert:
+      status_code: 200
+
+  getRepository:
+    method: GET
+    url: "https://api.github.com/repos/octocat/hello-world"
+    assert:
+      status_code: 200
+
+  searchRepositories:
+    method: GET
+    url: "https://api.github.com/search/repositories"
+    extra_headers:
+      Accept: "application/vnd.github.v3.text-match+json"
+    body:
+      q: "tetris"
+      sort: "stars"
+      order: "desc"
+    assert:
+      status_code: 200

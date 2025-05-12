@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../.request_collection_schema.json
+title: "JSON Placeholder API Collection"
+description: "A collection of test requests for the JSONPlaceholder API"
+
+headers:
+  Accept: "application/json"
+  Content-Type: "application/json"
+
+requests:
+  getAllPosts:
+    method: GET
+    url: "https://jsonplaceholder.typicode.com/posts"
+    assert:
+      status_code: 200
+      soft_timeout_s: 2.0
+
+  getSinglePost:
+    method: GET
+    url: "https://jsonplaceholder.typicode.com/posts/1"
+    assert:
+      status_code: 200
+
+  createPost:
+    method: POST
+    url: "https://jsonplaceholder.typicode.com/posts"
+    body:
+      title: "foo"
+      body: "bar"
+      userId: "1"
+    assert:
+      status_code: 201
+
+  updatePost:
+    method: PUT
+    url: "https://jsonplaceholder.typicode.com/posts/1"
+    extra_headers: {}
+    body:
+      id: "1"
+      title: "updated title"
+      body: "updated body"
+      userId: "1"
+    assert:
+      status_code: 200
+
+  deletePost:
+    method: DELETE
+    url: "https://jsonplaceholder.typicode.com/posts/1"
+    assert:
+      status_code: 200

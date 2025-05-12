@@ -1,0 +1,36 @@
+title: "Basic API Tests Collection"
+description: "Simple examples matching the provided format"
+headers:
+  User-Agent: "API-Test-Client"
+requests:
+  basicGet:
+    method: GET
+    url: "https://api.ipify.org/"
+
+  basicPost:
+    method: POST
+    url: "https://api.ipify.org/"
+    assert:
+      status_code: 403
+
+  timeoutGet:
+    method: GET
+    url: "https://pastebin.com/favicon.ico"
+    assert:
+      soft_timeout_s: 0.5
+
+  mockServerGet:
+    method: GET
+    url: "https://mockbin.org/bin/create"
+    extra_headers:
+      Accept: "application/json"
+
+  postbinTest:
+    method: POST
+    url: "https://postb.in/api/bin"
+    extra_headers:
+      Content-Type: "application/json"
+    body:
+      test: "value"
+    assert:
+      status_code: 200
