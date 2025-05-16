@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 from pathlib import Path
 from cyclopts import App
@@ -8,7 +9,7 @@ from restaurant.schema import RequestCollection
 
 app = App(
     name="RESTaurant",
-    help="A  dead simple CLI to run HTTP requests from a collection file.",
+    help="A dead simple CLI to run HTTP requests from a collection file.",
 )
 
 
@@ -60,7 +61,7 @@ def gen_schema():
     Use in the yml file to validate the request collection schema:
     `# yaml-language-server: $schema=<pathToTheSchema>/.request_collection_schema.json`
     """
-    print(RequestCollection.model_json_schema())
+    print(json.dumps(RequestCollection.model_json_schema()))
 
 
 def main():

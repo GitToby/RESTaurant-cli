@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 from pydantic import BaseModel, AnyHttpUrl, Field
 import httpx
-import yaml
+from piny import YamlStreamLoader
 
 APP_NAME = "restaurant"
 DEFAULT_OUT_DIR = f".{APP_NAME}/output"
@@ -38,11 +38,12 @@ class HttpRequestCheck(HttpRequestCheckStatusCode, HttpRequestCheckTimeout):
         return self.check_status_code(response) and self.check_timeout(response)
 
 
-class HttpRequest(BaseModel):
+class HttpSetup(BaseModel):
     method: Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"]
     url: AnyHttpUrl
     extra_headers: dict[str, str] = Field(default_factory=dict)
-    body: dict[str, str] = Field(default_factory=dict)
+    query_params: tuple[tuple[str, str], ...] | None = None
+    body: dict[str, str] | None = None
 
     test: HttpRequestCheck = Field(default_factory=HttpRequestCheck, alias="assert")
 
@@ -55,20 +56,27 @@ class HttpRequest(BaseModel):
                 method=self.method,
                 url=str(self.url),
                 headers=self.extra_headers,
+                params=self.query_params,
                 json=self.body,
             )
             # print(response.request.headers)
             return Result(
-                request=self,
+                setup=self,
                 response=response,
             )
         except httpx.RequestError as e:
-            return Result(request=self, response=e)
+            return Result(setup=self, response=e)
+
+
+# class ResultData(BaseModel):
+#     success: bool
+#     request: ...# req settings
+#     response: ...# resp settings
 
 
 # todo, make json serializable with a to_str for logging
 class Result(BaseModel):
-    request: "HttpRequest"
+    setup: "HttpSetup"
     response: httpx.Response | httpx.RequestError
 
     model_config = {
@@ -79,7 +87,7 @@ class Result(BaseModel):
     def was_success(self):
         if isinstance(self.response, httpx.RequestError):
             return False
-        return self.request.test.check(self.response)
+        return self.setup.test.check(self.response)
 
     @property
     def pretty_str(self) -> str:
@@ -89,18 +97,19 @@ class Result(BaseModel):
             time_str = "()"
             success_emoji = "❌"
         else:
+            status_str = self.response.history
             status_str = f"[green]{self.response.status_code}[/green]"
             time_str = f"({self.response.elapsed})"
 
-            if not self.request.test.check_status_code(self.response):
-                status_str = f"[red]{self.response.status_code}[/red] expected [purple]{self.request.test.status_code or '2xx'}[/purple] "
+            if not self.setup.test.check_status_code(self.response):
+                status_str = f"[red]{self.response.status_code}[/red] expected [purple]{self.setup.test.status_code or '2xx'}[/purple] "
                 success_emoji = "❌"
 
-            if not self.request.test.check_timeout(self.response):
-                time_str = f"[red]({self.response.elapsed})[/red] expected < [purple]{self.request.test.soft_timeout_s}[/purple]"
+            if not self.setup.test.check_timeout(self.response):
+                time_str = f"[red]({self.response.elapsed})[/red] expected < [purple]{self.setup.test.soft_timeout_s}[/purple]"
                 success_emoji = "❌"
 
-        return f"{success_emoji} {self.request.method:<8} {self.request.url} {status_str} {time_str}"
+        return f"{success_emoji} {self.setup.method:<8} {self.response.request.url} {status_str} {time_str}"
 
 
 class RequestCollectionOutput(BaseModel):
@@ -115,7 +124,7 @@ class RequestCollection(BaseModel):
     headers: dict[str, str] = Field(default_factory=dict)
 
     # todo, make a tree and exe in DAG, use stdlib graphlib
-    requests: dict[str, HttpRequest] = Field(default_factory=dict)
+    requests: dict[str, HttpSetup] = Field(default_factory=dict)
 
     # todo features:
     # - output result to file
@@ -135,9 +144,8 @@ class RequestCollection(BaseModel):
 
     @classmethod
     def load_from_file(cls, file: Path):
-        with open(file, "r") as f:
-            yml = yaml.safe_load(f)
-            return RequestCollection.model_validate(yml)
+        yml = YamlStreamLoader(stream=file.read_text()).load()
+        return RequestCollection.model_validate(yml)
 
 
 class GlobalConfig(BaseModel):
