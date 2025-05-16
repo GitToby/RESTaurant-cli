@@ -12,9 +12,8 @@ requests:
     method: GET
     url: "https://api.ipify.org/"
     query_params:
-      - ["a", "b"]
-      - ["a", "12"]
-      - ["a", '${AWS_PROFILE}']
+      aws_profile: ${AWS_PROFILE}
+      my_list: ["a", "b", "potato"]
 
   basicPost:
     method: POST

@@ -42,7 +42,7 @@ class HttpSetup(BaseModel):
     method: Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"]
     url: AnyHttpUrl
     extra_headers: dict[str, str] = Field(default_factory=dict)
-    query_params: tuple[tuple[str, str], ...] | None = None
+    query_params: dict[str, tuple[str, ...] | str | None] | None = None
     body: dict[str, str] | None = None
 
     test: HttpRequestCheck = Field(default_factory=HttpRequestCheck, alias="assert")
