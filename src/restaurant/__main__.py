@@ -5,11 +5,12 @@ from pathlib import Path
 from cyclopts import App
 from rich import print
 
-from restaurant.schema import RequestCollection
+from loguru import logger
+from restaurant.schema import HttpResultError, RequestCollection
 
 app = App(
-    name="RESTaurant",
-    help="A dead simple CLI to run HTTP requests from a collection file.",
+    name="restaurant",
+    help="A dead simple CLI to run HTTP REST requests from a collection file.",
 )
 
 
@@ -31,16 +32,19 @@ async def run(
     for i, collection_file in enumerate(input_):
         count_str = f"[{i + 1}/{len(input_)}]"
         print(f"{count_str} Loading {collection_file}...", end=" ")
-        rc = RequestCollection.load_from_file(collection_file)
+        rc = RequestCollection.from_yml_file(collection_file)
         print("Done.")
         print(f"{count_str} [bold]{rc.title}[/bold]")
         print(f"{count_str} Running {len(rc.requests)} requests...")
         results = await rc.execute()
 
         for result in results:
-            if not result.was_success:
+            if isinstance(result, HttpResultError):
                 failed = True
-            print(f"{count_str} {result.pretty_str}")
+                print(f"{count_str} got result {result.error}")
+            else:
+                failed = False
+                print(f"{count_str} got result {result.status_code}")
 
         print()
     # Final Status
@@ -65,4 +69,7 @@ def gen_schema():
 
 
 def main():
+    logger.remove()
+    _ = logger.add("restaurant_output.log")
+
     app()

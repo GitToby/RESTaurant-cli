@@ -1,115 +1,151 @@
+from abc import abstractmethod
+import base64
+from typing_extensions import override
 import asyncio
-from http import HTTPStatus
+from functools import cached_property
 from pathlib import Path
 from typing import Literal
-from pydantic import BaseModel, AnyHttpUrl, Field
+
 import httpx
+from loguru import logger
 from piny import YamlStreamLoader
+from pydantic import AnyHttpUrl, BaseModel, Field, PrivateAttr, SecretStr
+from pydantic.fields import computed_field
+
+from restaurant.response_checks import AssertDef
 
 APP_NAME = "restaurant"
 DEFAULT_OUT_DIR = f".{APP_NAME}/output"
 
 
-class HttpRequestCheckStatusCode(BaseModel):
-    status_code: int | None = None
-
-    def check_status_code(self, response: httpx.Response) -> bool:
-        """checks if the status code is the same as the expected status code or just a success code"""
-        if self.status_code:
-            return response.status_code == self.status_code
-        else:
-            return HTTPStatus(response.status_code).is_success
-
-
-class HttpRequestCheckTimeout(BaseModel):
-    soft_timeout_s: float | None = None
-
-    def check_timeout(self, response: httpx.Response) -> bool:
-        """checks if the response time is less than the expected timeout"""
-        if self.soft_timeout_s:
-            return response.elapsed.total_seconds() <= self.soft_timeout_s
-        else:
-            return True
-
-
-class HttpRequestCheck(HttpRequestCheckStatusCode, HttpRequestCheckTimeout):
-    def check(self, response: httpx.Response) -> bool:
-        """checks if the response is valid"""
-        return self.check_status_code(response) and self.check_timeout(response)
-
-
-class HttpSetup(BaseModel):
-    method: Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"]
-    url: AnyHttpUrl
-    extra_headers: dict[str, str] = Field(default_factory=dict)
-    query_params: dict[str, tuple[str, ...] | str | None] | None = None
-    body: dict[str, str] | None = None
-
-    test: HttpRequestCheck = Field(default_factory=HttpRequestCheck, alias="assert")
-
-    # def __hash__(self) -> int:
-    # return hash(self.method + self.url)
-
-    async def make_request(self, client: httpx.AsyncClient):
-        try:
-            response = await client.request(
-                method=self.method,
-                url=str(self.url),
-                headers=self.extra_headers,
-                params=self.query_params,
-                json=self.body,
-            )
-            # print(response.request.headers)
-            return Result(
-                setup=self,
-                response=response,
-            )
-        except httpx.RequestError as e:
-            return Result(setup=self, response=e)
-
-
-# class ResultData(BaseModel):
-#     success: bool
-#     request: ...# req settings
-#     response: ...# resp settings
-
-
-# todo, make json serializable with a to_str for logging
-class Result(BaseModel):
-    setup: "HttpSetup"
-    response: httpx.Response | httpx.RequestError
+class HttpResultError(BaseModel):
+    request: httpx.Request = Field(exclude=True)
+    error: httpx.RequestError | None = Field(default=None, exclude=True)
 
     model_config = {
         "arbitrary_types_allowed": True,
     }
 
-    @property
-    def was_success(self):
-        if isinstance(self.response, httpx.RequestError):
-            return False
-        return self.setup.test.check(self.response)
+
+class HttpResult(BaseModel):
+    response: httpx.Response = Field(exclude=True)
+    tests: AssertDef | None = Field(default=None, exclude=True)
 
     @property
-    def pretty_str(self) -> str:
-        success_emoji = "✅"
-        if isinstance(self.response, httpx.RequestError):
-            status_str = f"[red]Error {str(self.response)}[/red]"
-            time_str = "()"
-            success_emoji = "❌"
-        else:
-            status_str = self.response.history
-            status_str = f"[green]{self.response.status_code}[/green]"
-            time_str = f"({self.response.elapsed})"
+    def request(self):
+        return self.response.request
 
-            if not self.setup.test.check_status_code(self.response):
-                status_str = f"[red]{self.response.status_code}[/red] expected [purple]{self.setup.test.status_code or '2xx'}[/purple] "
-                success_emoji = "❌"
+    @computed_field
+    @property
+    def status_code(self) -> int | None:
+        return self.response.status_code
 
-            if not self.setup.test.check_timeout(self.response):
-                time_str = f"[red]({self.response.elapsed})[/red] expected < [purple]{self.setup.test.soft_timeout_s}[/purple]"
-                success_emoji = "❌"
+    @computed_field
+    @cached_property
+    def response_text(self) -> str | None:
+        return self.response.text
 
-        return f"{success_emoji} {self.setup.method:<8} {self.response.request.url} {status_str} {time_str}"
+    @computed_field
+    @property
+    def is_success(self) -> bool:
+        return self.response.is_success
+
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
+
+
+class Auth(BaseModel):
+    @property
+    @abstractmethod
+    def header(self) -> str: ...
+
+
+class AuthBasic(Auth):
+    username: str
+    password: SecretStr
+
+    @property
+    @override
+    def header(self):
+        encoded = base64.b64encode(
+            f"{self.username}:{self.password.get_secret_value()}".encode()
+        ).decode()
+        return f"Basic {encoded}"
+
+
+class AuthBearerToken(Auth):
+    token: str
+
+    @property
+    @override
+    def header(self):
+        return f"Bearer {self.token}"
+
+
+class HttpSetup(BaseModel):
+    method: Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"]
+    """The method to use when making the HTTP request"""
+
+    url: AnyHttpUrl
+    """The full url to use when sending the HTTP request"""
+
+    extra_headers: dict[str, str] = Field(default_factory=dict)
+    """Any extra headers to include in the request"""
+
+    query_params: dict[str, tuple[str, ...] | str | None] | None = None
+    """
+    Any query params to attach to the url.
+
+    Multiple params with the same key will be added as multiple `k=v` entries.
+    """
+
+    auth: AuthBasic | AuthBearerToken | None = None
+    """
+    A nicer way to generate Auth headers
+    """
+
+    body: dict[str, str] | None = None
+    """The json bob to send as the body of the request"""
+
+    assert_: AssertDef = Field(default_factory=AssertDef, alias="assert")
+    """The tests to check responses against"""
+
+    _results: list[HttpResult] = PrivateAttr(default_factory=list)
+    _errors: list[HttpResultError] = PrivateAttr(default_factory=list)
+
+    @property
+    def results(self):
+        return self._results
+
+    @property
+    def latest_result(self) -> HttpResult:
+        return self.results[-1]
+
+    async def send_with(self, client: httpx.AsyncClient):
+        # generate auth header
+        if self.auth:
+            self.extra_headers["Authorization"] = self.auth.header
+
+        request = client.build_request(
+            method=self.method,
+            url=str(self.url),
+            headers=self.extra_headers,
+            params=self.query_params,
+            json=self.body,
+            timeout=self.assert_.timeout_s or httpx.USE_CLIENT_DEFAULT,
+        )
+        try:
+            logger.debug("Sending request {}", self)
+            response = await client.send(request)
+            result = HttpResult(response=response, tests=self.assert_)
+            self._results.append(result)
+        except httpx.RequestError as e:
+            logger.warning("Error with request {}", e)
+            result = HttpResultError(request=request, error=e)
+            self._errors.append(result)
+
+        return result
 
 
 class RequestCollectionOutput(BaseModel):
@@ -117,7 +153,6 @@ class RequestCollectionOutput(BaseModel):
     output_dir: Path = Field(default_factory=lambda: Path(DEFAULT_OUT_DIR))
 
 
-# todo, load from yml file
 class RequestCollection(BaseModel):
     title: str
     description: str = ""
@@ -133,7 +168,7 @@ class RequestCollection(BaseModel):
 
     def collect(self, client: httpx.AsyncClient):
         """Collect all requests as async httpx requests."""
-        return [request.make_request(client) for request in self.requests.values()]
+        return [request.send_with(client) for request in self.requests.values()]
 
     async def execute(self):
         """Execute all requests in the collection."""
@@ -143,7 +178,7 @@ class RequestCollection(BaseModel):
             return results
 
     @classmethod
-    def load_from_file(cls, file: Path):
+    def from_yml_file(cls, file: Path):
         yml = YamlStreamLoader(stream=file.read_text()).load()
         return RequestCollection.model_validate(yml)
 

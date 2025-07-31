@@ -1,6 +1,5 @@
 # yaml-language-server: $schema=../.request_collection_schema.json
-
-title: "GitHub API Collection"
+title: Github Requests
 description: "A collection of example requests for the GitHub API"
 headers:
   Accept: "application/vnd.github.v3+json"
@@ -13,6 +12,9 @@ requests:
     assert:
       status_code: 200
       soft_timeout_s: 3.0
+      body:
+        like: ...
+        not_like: ...
 
   getZenMessage:
     method: GET
