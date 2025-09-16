@@ -13,3 +13,5 @@ wheels/
 
 .request_collection_schema.json
 live
+*.log
+out

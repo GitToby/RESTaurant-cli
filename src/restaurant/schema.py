@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import base64
+import statistics
 from typing_extensions import override
-import asyncio
 from functools import cached_property
 from pathlib import Path
 from typing import Literal
@@ -9,8 +9,15 @@ from typing import Literal
 import httpx
 from loguru import logger
 from piny import YamlStreamLoader
-from pydantic import AnyHttpUrl, BaseModel, Field, PrivateAttr, SecretStr
-from pydantic.fields import computed_field
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    Field,
+    PositiveFloat,
+    PrivateAttr,
+    SecretStr,
+    computed_field,
+)
 
 from restaurant.response_checks import AssertDef
 
@@ -18,22 +25,28 @@ APP_NAME = "restaurant"
 DEFAULT_OUT_DIR = f".{APP_NAME}/output"
 
 
-class HttpResultError(BaseModel):
-    request: httpx.Request = Field(exclude=True)
-    error: httpx.RequestError | None = Field(default=None, exclude=True)
-
+class BaseResult(BaseModel):
+    setup: "HttpSetup" = Field(exclude=True)
     model_config = {
         "arbitrary_types_allowed": True,
     }
 
 
-class HttpResult(BaseModel):
+class HttpResultError(BaseResult):
+    request: httpx.Request = Field(exclude=True)
+    error: httpx.RequestError | None = Field(default=None, exclude=True)
+
+
+class HttpResult(BaseResult):
     response: httpx.Response = Field(exclude=True)
-    tests: AssertDef | None = Field(default=None, exclude=True)
 
     @property
     def request(self):
         return self.response.request
+
+    @property
+    def tests(self):
+        return self.setup.assert_
 
     @computed_field
     @property
@@ -50,9 +63,9 @@ class HttpResult(BaseModel):
     def is_success(self) -> bool:
         return self.response.is_success
 
-    model_config = {
-        "arbitrary_types_allowed": True,
-    }
+    @override
+    def __str__(self):
+        return f"status {self.status_code} in {self.response.elapsed.total_seconds():.3f}s | success={self.is_success!r:<5} "
 
 
 class Auth(BaseModel):
@@ -102,7 +115,7 @@ class HttpSetup(BaseModel):
 
     auth: AuthBasic | AuthBearerToken | None = None
     """
-    A nicer way to generate Auth headers
+    A nicer way to generate Auth headers, overrides the requests headers under "Authorization:".
     """
 
     body: dict[str, str] | None = None
@@ -111,41 +124,106 @@ class HttpSetup(BaseModel):
     assert_: AssertDef = Field(default_factory=AssertDef, alias="assert")
     """The tests to check responses against"""
 
-    _results: list[HttpResult] = PrivateAttr(default_factory=list)
-    _errors: list[HttpResultError] = PrivateAttr(default_factory=list)
+    benchmark: int | None = Field(None, ge=0)
+    """The number of times to benchmark the request"""
 
+    _results: list[HttpResult | HttpResultError] = PrivateAttr(default_factory=list)
+
+    @computed_field
     @property
-    def results(self):
+    def results(self) -> list[HttpResult | HttpResultError]:
         return self._results
 
     @property
-    def latest_result(self) -> HttpResult:
+    def latest_result(self):
         return self.results[-1]
 
-    async def send_with(self, client: httpx.AsyncClient):
+    @property
+    def benchmark_min(self):
+        return min(
+            r.response.elapsed.total_seconds()
+            for r in self.results
+            if isinstance(r, HttpResult)
+        )
+
+    @property
+    def benchmark_max(self):
+        return max(
+            r.response.elapsed.total_seconds()
+            for r in self.results
+            if isinstance(r, HttpResult)
+        )
+
+    @property
+    def benchmark_mean(self):
+        return statistics.mean(
+            r.response.elapsed.total_seconds()
+            for r in self.results
+            if isinstance(r, HttpResult)
+        )
+
+    @property
+    def benchmark_median(self):
+        return statistics.median(
+            r.response.elapsed.total_seconds()
+            for r in self.results
+            if isinstance(r, HttpResult)
+        )
+
+    @computed_field
+    @property
+    def benchmark_results(self) -> dict[str, PositiveFloat] | None:
+        if self.benchmark:
+            return {
+                "count": len(self.results),
+                "min": self.benchmark_min,
+                "max": self.benchmark_max,
+                "median": self.benchmark_median,
+                "avg": self.benchmark_mean,
+            }
+
+    @override
+    def __str__(self):
+        return f"{self.method:<6} {self.url}"
+
+    def _httpx_request(
+        self, client: httpx.AsyncClient, headers: dict[str, str] | None = None
+    ):
+        if not headers:
+            headers = {}
+
         # generate auth header
         if self.auth:
-            self.extra_headers["Authorization"] = self.auth.header
+            headers["Authorization"] = self.auth.header
 
-        request = client.build_request(
+        return client.build_request(
             method=self.method,
             url=str(self.url),
-            headers=self.extra_headers,
+            headers=headers | self.extra_headers,
             params=self.query_params,
             json=self.body,
             timeout=self.assert_.timeout_s or httpx.USE_CLIENT_DEFAULT,
         )
-        try:
-            logger.debug("Sending request {}", self)
-            response = await client.send(request)
-            result = HttpResult(response=response, tests=self.assert_)
-            self._results.append(result)
-        except httpx.RequestError as e:
-            logger.warning("Error with request {}", e)
-            result = HttpResultError(request=request, error=e)
-            self._errors.append(result)
 
-        return result
+    async def send_with(
+        self,
+        client: httpx.AsyncClient,
+        headers: dict[str, str] | None = None,
+    ):
+        """Makes a request and stores the result in the results list"""
+        request = self._httpx_request(client, headers)
+        logger.debug("Sending request {}", request)
+        for _ in range(self.benchmark or 1):
+            try:
+                logger.debug("Sending request {}", self)
+                response = await client.send(request)
+                result = HttpResult(setup=self, response=response)
+            except httpx.RequestError as e:
+                logger.warning("Error with request {}", e)
+                result = HttpResultError(setup=self, request=request, error=e)
+            self._results.append(result)
+
+        return self
 
 
 class RequestCollectionOutput(BaseModel):
@@ -157,6 +235,7 @@ class RequestCollection(BaseModel):
     title: str
     description: str = ""
     headers: dict[str, str] = Field(default_factory=dict)
+    """Global headers to include with each request"""
 
     # todo, make a tree and exe in DAG, use stdlib graphlib
     requests: dict[str, HttpSetup] = Field(default_factory=dict)
@@ -164,22 +243,17 @@ class RequestCollection(BaseModel):
     # todo features:
     # - output result to file
     # - benchmark with n requests
-    # - read secrets from env vars/secret store
 
-    def collect(self, client: httpx.AsyncClient):
-        """Collect all requests as async httpx requests."""
-        return [request.send_with(client) for request in self.requests.values()]
-
-    async def execute(self):
+    async def collect(self):
         """Execute all requests in the collection."""
         async with httpx.AsyncClient(headers=self.headers) as client:
-            requests = self.collect(client)
-            results = await asyncio.gather(*requests)
-            return results
+            # send each setup with the client and return the result
+            requests = {k: await v.send_with(client) for k, v in self.requests.items()}
+            return requests
 
     @classmethod
     def from_yml_file(cls, file: Path):
-        yml = YamlStreamLoader(stream=file.read_text()).load()
+        yml = YamlStreamLoader(stream=file.read_text()).load()  # pyright: ignore [reportUnknownMemberType, reportAny]
         return RequestCollection.model_validate(yml)
 
 

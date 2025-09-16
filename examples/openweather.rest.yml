@@ -10,7 +10,7 @@ requests:
     url: "https://api.openweathermap.org/data/2.5/weather"
     body:
       q: "London,uk"
-      appid: "your_api_key"
+      appid: $OPENWEATHERMAP_API_KEY
       units: "metric"
     assert:
       status_code: 200
@@ -21,7 +21,7 @@ requests:
     url: "https://api.openweathermap.org/data/2.5/forecast"
     body:
       q: "New York"
-      appid: "your_api_key"
+      appid: $OPENWEATHERMAP_API_KEY
       units: "imperial"
     assert:
       status_code: 200
@@ -32,6 +32,6 @@ requests:
     body:
       lat: "51.5074"
       lon: "-0.1278"
-      appid: "your_api_key"
+      appid: $OPENWEATHERMAP_API_KEY
     assert:
       status_code: 200

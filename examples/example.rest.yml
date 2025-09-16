@@ -14,6 +14,7 @@ requests:
     query_params:
       aws_profile: ${AWS_PROFILE}
       my_list: ["a", "b", "potato"]
+    benchmark: 10
 
   basicPost:
     method: POST

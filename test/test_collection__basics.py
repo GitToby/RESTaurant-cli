@@ -26,7 +26,7 @@ async def test__request_collection__init_file_secrets():
     assert isinstance(http_basic.auth, AuthBasic)
     assert http_basic.auth.password.get_secret_value() == "password"
 
-    results = await collection.execute()
+    results = await collection.collect()
     assert len(results) == 1
     assert isinstance(results[0], HttpResult)
     assert results[0].is_success
