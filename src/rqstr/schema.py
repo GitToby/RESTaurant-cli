@@ -116,18 +116,32 @@ class AuthBearerToken(Auth):
         return f"Bearer {self.token}"
 
 
-class HttpSetup(BaseModel):
+class HeadersMixin(BaseModel):
+    headers: dict[str, str] = Field(default_factory=dict)
+    """Any headers to include in the request"""
+
+    secret_headers: dict[str, SecretStr] = Field(default_factory=dict)
+    """Any extra headers to include in the request, these will be removed on any output"""
+
+    def _compile_headers(
+        self, extra_headers: dict[str, str] | None = None
+    ) -> dict[str, str]:
+        if not extra_headers:
+            extra_headers = {}
+
+        return (
+            self.headers
+            | {k: v.get_secret_value() for k, v in self.secret_headers.items()}
+            | extra_headers
+        )
+
+
+class HttpSetup(HeadersMixin):
     method: Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"]
     """The method to use when making the HTTP request"""
 
     url: AnyHttpUrl
     """The full url to use when sending the HTTP request"""
-
-    extra_headers: dict[str, str] = Field(default_factory=dict)
-    """Any extra headers to include in the request"""
-
-    secret_headers: dict[str, SecretStr] = Field(default_factory=dict)
-    """Any extra headers to include in the request, these will be removed on output"""
 
     query_params: dict[str, tuple[str, ...] | str | None] | None = None
     """
@@ -227,16 +241,10 @@ class HttpSetup(BaseModel):
         if self.auth:
             headers["Authorization"] = self.auth.header
 
-        all_headers = (
-            headers
-            | self.extra_headers
-            | {k: v.get_secret_value() for k, v in self.secret_headers.items()}
-        )
-
         return client.build_request(
             method=self.method,
             url=str(self.url),
-            headers=all_headers,
+            headers=self._compile_headers(headers),
             params=self.query_params,
             json=self.body,
             timeout=self.assert_.timeout_s or httpx.USE_CLIENT_DEFAULT,
@@ -264,11 +272,9 @@ class RequestCollectionOutput(BaseModel):
     output_dir: Path = Field(default_factory=lambda: Path(DEFAULT_OUT_DIR))
 
 
-class RequestCollection(BaseModel):
+class RequestCollection(HeadersMixin):
     title: str
     description: str = ""
-    headers: dict[str, str] = Field(default_factory=dict)
-    """Global headers to include with each request"""
 
     # todo, make a tree and exe in DAG, use stdlib graphlib
     requests: dict[str, HttpSetup] = Field(default_factory=dict)
@@ -281,7 +287,11 @@ class RequestCollection(BaseModel):
         """Execute all requests in the collection."""
         async with httpx.AsyncClient(headers=self.headers) as client:
             # send each setup with the client and return the result
-            requests = {k: await v.send_with(client) for k, v in self.requests.items()}
+            _headers = self._compile_headers()
+            requests = {
+                k: await v.send_with(client, headers=_headers)
+                for k, v in self.requests.items()
+            }
             return requests
 
     @classmethod
