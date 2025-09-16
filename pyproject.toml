@@ -1,5 +1,5 @@
 [project]
-name = "rqstr"
+name = "rqstr-cli"
 dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"

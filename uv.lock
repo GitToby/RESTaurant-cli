@@ -446,7 +446,7 @@ wheels = [
 ]
 
 [[package]]
-name = "rqstr"
+name = "rqstr-cli"
 source = { editable = "." }
 dependencies = [
     { name = "cyclopts" },
