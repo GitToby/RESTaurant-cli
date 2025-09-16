@@ -73,7 +73,7 @@ async def run(
             output_file = output_dir / rc.title / "out.json"
             output_file.parent.mkdir(parents=True, exist_ok=True)
             with open(output_file, "w") as f:
-                _ = f.write(rc.model_dump_json(indent=2))
+                _ = f.write(rc.model_dump_json(indent=2, warnings=False))
 
     # Final Status
     if any(isinstance(result, HttpResultError) for result in requests):
