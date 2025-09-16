@@ -6,7 +6,7 @@ from cyclopts import App
 from rich import print
 
 from loguru import logger
-from rqstr.schema import HttpResultError, RequestCollection
+from rqstr.schema import HttpResultError, RequestCollection, HttpResult
 from textwrap import dedent
 
 app = App(
@@ -18,8 +18,9 @@ app = App(
 @app.command(alias="do")
 async def run(
     input_: list[Path] | None = None,
-    no_fail_on_error: bool = False,
     output_dir: Path | None = None,
+    fail_on_error: bool = True,
+    print_response: bool = True,
 ):
     """Scan for request collections in child dirs and run the requests in them."""
     if not input_:
@@ -40,15 +41,31 @@ async def run(
         requests = await rc.collect()
 
         for title, request in requests.items():
-            print(title, str(request))
+            spacer = ""
+            print(spacer, f"{title} {str(request)}")
             for k, result in enumerate(request.results):
-                print(k, str(result))
+                spacer = "  "
+                print(spacer, f"request #{k + 1} {str(result)}")
 
             if request.benchmark:
-                print("Benchmark Results:")
+                print(spacer, "Benchmark Results:")
                 print(
-                    " ".join(f"{k}: {v}" for k, v in request.benchmark_results.items())
+                    spacer,
+                    " ".join(f"{k}: {v}" for k, v in request.benchmark_results.items()),
                 )
+            if print_response:
+                print(
+                    ">>>", f"result #{len(request.results)} of {len(request.results)}"
+                )
+                if isinstance(request.latest_result, HttpResult):
+                    if not isinstance(request.latest_result.response_data, dict):
+                        print(repr(request.latest_result.response_data))
+                    else:
+                        print(request.latest_result.response_data)
+
+                if isinstance(request.latest_result, HttpResultError):
+                    print(request.latest_result.error)
+                print("<<<")
 
         print()
 
@@ -61,9 +78,9 @@ async def run(
     # Final Status
     if any(isinstance(result, HttpResultError) for result in requests):
         print("[red]Some requests failed.")
-        if no_fail_on_error:
-            exit(0)
-        exit(1)
+        if fail_on_error:
+            exit(1)
+        exit(0)
     else:
         print("[green]All requests succeeded.")
 

@@ -28,5 +28,6 @@ async def test__request_collection__init_file_secrets():
 
     results = await collection.collect()
     assert len(results) == 1
-    assert isinstance(results[0], HttpResult)
-    assert results[0].is_success
+    name, res_0 = results.popitem()
+    assert isinstance(res_0, HttpResult)
+    assert res_0.is_success
