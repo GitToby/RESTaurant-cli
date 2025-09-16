@@ -1,8 +1,9 @@
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
+import asyncio
 import base64
 import statistics
+from pydantic_core import from_json
 from typing_extensions import override
-from functools import cached_property
 from pathlib import Path
 from typing import Literal
 
@@ -37,6 +38,12 @@ class HttpResultError(BaseResult):
     error: httpx.RequestError | None = Field(default=None, exclude=True)
 
 
+# specifies the recursive return type for parsed data
+RtnDictTypes = int | float | None | str | bool
+_RtnDict = dict[str, RtnDictTypes]
+RtnDict = dict[str, _RtnDict | RtnDictTypes]
+
+
 class HttpResult(BaseResult):
     response: httpx.Response = Field(exclude=True)
 
@@ -53,10 +60,23 @@ class HttpResult(BaseResult):
     def status_code(self) -> int | None:
         return self.response.status_code
 
-    @computed_field
-    @cached_property
-    def response_text(self) -> str | None:
+    @property
+    def response_text(self) -> str:
         return self.response.text
+
+    @property
+    def parsed_response(self) -> RtnDict:
+        try:
+            return from_json(self.response_text, allow_partial=True)  # pyright: ignore [reportAny]
+        except ValueError:
+            return {}
+
+    @computed_field
+    @property
+    def response_data(
+        self,
+    ) -> RtnDict | str:
+        return self.parsed_response or self.response_text
 
     @computed_field
     @property
@@ -68,7 +88,7 @@ class HttpResult(BaseResult):
         return f"status {self.status_code} in {self.response.elapsed.total_seconds():.3f}s | success={self.is_success!r:<5} "
 
 
-class Auth(BaseModel):
+class Auth(BaseModel, metaclass=ABCMeta):
     @property
     @abstractmethod
     def header(self) -> str: ...
@@ -102,8 +122,6 @@ class HttpSetup(BaseModel):
 
     url: AnyHttpUrl
     """The full url to use when sending the HTTP request"""
-
-    _client: httpx.AsyncClient
 
     extra_headers: dict[str, str] = Field(default_factory=dict)
     """Any extra headers to include in the request"""
@@ -232,16 +250,12 @@ class HttpSetup(BaseModel):
         """Makes a request and stores the result in the results list"""
         request = self._httpx_request(client, headers)
         logger.debug("Sending request {}", request)
-        for _ in range(self.benchmark or 1):
-            try:
-                logger.debug("Sending request {}", self)
-                response = await client.send(request)
-                result = HttpResult(setup=self, response=response)
-            except httpx.RequestError as e:
-                logger.warning("Error with request {}", e)
-                result = HttpResultError(setup=self, request=request, error=e)
-            self._results.append(result)
-
+        # todo, make async check for setup errors
+        responses = await asyncio.gather(
+            *(client.send(request) for _ in range(self.benchmark or 1))
+        )
+        results = (HttpResult(setup=self, response=response) for response in responses)
+        self._results.extend(results)
         return self
 
 
