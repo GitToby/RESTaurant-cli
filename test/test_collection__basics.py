@@ -1,4 +1,4 @@
-from restaurant.schema import AuthBasic, HttpResult, RequestCollection
+from rqstr.schema import AuthBasic, HttpResult, RequestCollection
 from conftest import (  # pyright: ignore [reportImplicitRelativeImport]
     RESOURCES_DIR,
 )

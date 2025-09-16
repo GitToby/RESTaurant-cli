@@ -6,7 +6,7 @@ from cyclopts import App
 from rich import print
 
 from loguru import logger
-from restaurant.schema import HttpResultError, RequestCollection
+from rqstr.schema import HttpResultError, RequestCollection
 from textwrap import dedent
 
 app = App(

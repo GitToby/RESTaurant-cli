@@ -1,6 +1,6 @@
 import http
 import httpx
-from restaurant.schema import HttpResult, HttpResultError, HttpSetup
+from rqstr.schema import HttpResult, HttpResultError, HttpSetup
 import pytest
 import base64
 
