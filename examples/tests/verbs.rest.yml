@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../../.request_collection_schema.json
+title: Postman Echo Requests - Verbs
+description: >
+  Requests that use the Postman Echo API at https://postman-echo.com.
+  Docs: https://www.postman.com/postman/published-postman-templates/documentation/ae2ja6x/postman-echo?ctx=documentation
+
+headers:
+  Content-Type: application/json
+
+requests:
+  get_request:
+    method: GET
+    url: https://postman-echo.com/get
+    query_params:
+      param1: value1
+      param2: value2
+    assert:
+      status_code: 200
+  post_request:
+    method: POST
+    url: https://postman-echo.com/post
+    body:
+      key1: value1
+      key2: value2
+    assert:
+      status_code: 200
+  put_request:
+    method: PUT
+    url: https://postman-echo.com/put
+    body:
+      key1: value1
+      key2: value2
+    assert:
+      status_code: 200
+  delete_request:
+    method: DELETE
+    url: https://postman-echo.com/delete
+    assert:
+      status_code: 200

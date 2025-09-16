@@ -1,11 +1,20 @@
+# yaml-language-server: $schema=../.request_collection_schema.json
+
 title: "Basic API Tests Collection"
+
 description: "Simple examples matching the provided format"
 headers:
   User-Agent: "API-Test-Client"
+  example: ${POST_ID:-my_default_password}
+
 requests:
   basicGet:
     method: GET
     url: "https://api.ipify.org/"
+    query_params:
+      aws_profile: ${AWS_PROFILE}
+      my_list: ["a", "b", "potato"]
+    benchmark: 10
 
   basicPost:
     method: POST
