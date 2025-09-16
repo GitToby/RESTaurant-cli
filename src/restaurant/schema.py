@@ -103,8 +103,13 @@ class HttpSetup(BaseModel):
     url: AnyHttpUrl
     """The full url to use when sending the HTTP request"""
 
+    _client: httpx.AsyncClient
+
     extra_headers: dict[str, str] = Field(default_factory=dict)
     """Any extra headers to include in the request"""
+
+    secret_headers: dict[str, SecretStr] = Field(default_factory=dict)
+    """Any extra headers to include in the request, these will be removed on output"""
 
     query_params: dict[str, tuple[str, ...] | str | None] | None = None
     """
@@ -172,7 +177,7 @@ class HttpSetup(BaseModel):
 
     @computed_field
     @property
-    def benchmark_results(self) -> dict[str, PositiveFloat] | None:
+    def benchmark_results(self) -> dict[str, PositiveFloat]:
         if self.benchmark:
             return {
                 "count": len(self.results),
@@ -181,14 +186,22 @@ class HttpSetup(BaseModel):
                 "median": self.benchmark_median,
                 "avg": self.benchmark_mean,
             }
+        else:
+            return {}
 
     @override
     def __str__(self):
-        return f"{self.method:<6} {self.url}"
+        return f"{self.method:<6} {self._httpx_request().url}"
 
     def _httpx_request(
-        self, client: httpx.AsyncClient, headers: dict[str, str] | None = None
+        self,
+        client: httpx.AsyncClient | None = None,
+        headers: dict[str, str] | None = None,
     ):
+        if not client:
+            logger.warning("client is required, making a temp one")
+            client = httpx.AsyncClient()
+
         if not headers:
             headers = {}
 
@@ -196,10 +209,16 @@ class HttpSetup(BaseModel):
         if self.auth:
             headers["Authorization"] = self.auth.header
 
+        all_headers = (
+            headers
+            | self.extra_headers
+            | {k: v.get_secret_value() for k, v in self.secret_headers.items()}
+        )
+
         return client.build_request(
             method=self.method,
             url=str(self.url),
-            headers=headers | self.extra_headers,
+            headers=all_headers,
             params=self.query_params,
             json=self.body,
             timeout=self.assert_.timeout_s or httpx.USE_CLIENT_DEFAULT,
