@@ -15,3 +15,4 @@ wheels/
 live
 *.log
 out
+src/rqstr/_version.py

@@ -12,10 +12,6 @@ dependencies = [
     "pydantic>=2.11.4",
 ]
 
-[build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8"]
-build-backend = "setuptools.build_meta"
-
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
@@ -23,7 +19,17 @@ dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.26.0",
     "ruff>=0.11.9",
+    "setuptools>=80.9.0",
+    "setuptools-scm>=9.2.0",
 ]
+
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_file = "src/rqstr/_version.py"
+
 
 [project.scripts]
 rqstr = "rqstr.__main__:main"
