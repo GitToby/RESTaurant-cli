@@ -1,5 +1,5 @@
 [project]
-name = "RESTaurant"
+name = "rqstr-cli"
 dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
@@ -26,8 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-restaurant = "restaurant.__main__:main"
-rest = "restaurant.__main__:main"
+rqstr = "rqstr.__main__:main"
 
 [tool.pyright]
 venvPath = "."

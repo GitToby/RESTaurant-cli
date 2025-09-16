@@ -19,7 +19,7 @@ from pydantic import (
     computed_field,
 )
 
-from restaurant.response_checks import AssertDef
+from rqstr.response_checks import AssertDef
 
 APP_NAME = "restaurant"
 DEFAULT_OUT_DIR = f".{APP_NAME}/output"
