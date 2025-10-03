@@ -165,4 +165,7 @@ class ResponseData(HasChecks):
 
     @override
     def __str__(self):
-        return f"{self.httpx_request.url} ({self.status_code}) in {self.response.elapsed.total_seconds():.3f}s | success={self.is_success!r:<5}"
+        req = self.httpx_request
+        res = self.response
+        emoji = "✅" if self.is_success else "❌"
+        return f"{emoji} {req.method:<5} {req.url} ({self.status_code}) in {res.elapsed.total_seconds():.3f}s"
