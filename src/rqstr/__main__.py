@@ -39,7 +39,7 @@ async def run(
     input_ = [p for p in input_ if p.is_file()]
     print(f"Found {len(input_)} collection files.", end="\n\n")
 
-    ns = datetime.datetime.now().isoformat()
+    ns = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", os.sep)
     for collection_file in input_:
         print(f"Loading {collection_file}...", end=" ")
         rc = RequestCollection.from_yml_file(collection_file)

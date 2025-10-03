@@ -33,12 +33,10 @@ class StdOutOutput(OutputConf):
         collection: RequestCollection,
         responses: Mapping[str, ResponseCollection],
         include_output: bool = False,
-
     ):
         for i, (req_name, responses_) in enumerate(responses.items()):
-            print(f" {i + 1}/{len(responses)} {req_name}")
-            for j, response in enumerate(responses_.responses):
-                print(f"  {j + 1}/{len(responses_.responses)} {response}")
+            for response in responses_.responses:
+                print(f" [{i + 1}/{len(responses)}] - {req_name:<30} | {response}")
                 if include_output:
                     print(f"  {response.response_text}")
 
@@ -68,4 +66,4 @@ class FileOutput(OutputConf):
                     )
                 )
 
-        print(f"Files written to {output_dir}")
+        print(f"Files written to '{output_dir}'")
