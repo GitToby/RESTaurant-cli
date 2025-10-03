@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=../.rqstr_schema.json
+
 title: "OpenWeatherMap API Collection"
 description: "Test requests for the OpenWeatherMap API"
 

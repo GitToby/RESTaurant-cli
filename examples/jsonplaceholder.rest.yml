@@ -1,4 +1,5 @@
-# yaml-language-server: $schema=../.request_collection_schema.json
+# yaml-language-server: $schema=../.rqstr_schema.json
+
 title: "JSON Placeholder API Collection"
 description: "A collection of test requests for the JSONPlaceholder API"
 
