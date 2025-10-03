@@ -1,45 +1,40 @@
-# yaml-language-server: $schema=../.request_collection_schema.json
+# yaml-language-server: $schema=../.rqstr_schema.json
 
-title: "Basic API Tests Collection"
+# Collection metadata
+title: "My API Tests"
+description: "Optional description"
 
-description: "Simple examples matching the provided format"
+# Global headers for all requests
 headers:
-  User-Agent: "API-Test-Client"
-  example: ${POST_ID:-my_default_password}
+  Accept: "application/json"
 
+# Global Auth for all requests
+auth:
+  token: ${API_TOKEN:-12345678}
+
+# Request definitions
 requests:
-  basicGet:
-    method: GET
-    url: "https://api.ipify.org/"
-    query_params:
-      aws_profile: ${AWS_PROFILE}
-      my_list: ["a", "b", "potato"]
-    benchmark: 10
+  requestName:
+    method: GET # HTTP method
+    url: "https://example.com" # Request URL
 
-  basicPost:
-    method: POST
-    url: "https://api.ipify.org/"
-    assert:
-      status_code: 403
-
-  timeoutGet:
-    method: GET
-    url: "https://pastebin.com/favicon.ico"
-    assert:
-      soft_timeout_s: 0.5
-
-  mockServerGet:
-    method: GET
-    url: "https://mockbin.org/bin/create"
-    extra_headers:
-      Accept: "application/json"
-
-  postbinTest:
-    method: POST
-    url: "https://postb.in/api/bin"
+    # Optional: additional headers
     extra_headers:
       Content-Type: "application/json"
+
+    # Optional: query parameters
+    query_params:
+      param1: "value"
+      param2: ["multiple", "values"]
+
+    # Optional: JSON body
     body:
-      test: "value"
+      key: "value"
+
+    # Optional: assertions
     assert:
-      status_code: 200
+      status_code: 200 # Expected status code
+      soft_timeout_s: 5.0 # Request timeout
+
+    # Optional: benchmark (run N times)
+    benchmark: 10

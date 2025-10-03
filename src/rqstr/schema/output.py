@@ -35,8 +35,14 @@ class StdOutOutput(OutputConf):
         include_output: bool = False,
     ):
         for i, (req_name, responses_) in enumerate(responses.items()):
-            for response in responses_.responses:
-                print(f" [{i + 1}/{len(responses)}] - {req_name:<30} | {response}")
+            for j, response in enumerate(responses_.responses):
+                bench_str = (
+                    f"{j}/{responses_.benchmark}" if responses_.benchmark else ""
+                )
+                req_name_ = f"{req_name} {bench_str}"
+                print(
+                    f" [{i + 1}/{len(responses)}] - {req_name_:<20} | {response}"
+                )
                 if include_output:
                     print(f"  {response.response_text}")
 

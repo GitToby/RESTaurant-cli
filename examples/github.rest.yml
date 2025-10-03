@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../.request_collection_schema.json
+# yaml-language-server: $schema=../.rqstr_schema.json
 title: Github Requests
 description: "A collection of example requests for the GitHub API"
 headers:

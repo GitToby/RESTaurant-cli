@@ -1,193 +1,180 @@
-# RESTurant
+# rqstr
 
-> A dead simple CLI to run HTTP requests from YAML collection files.
+A simple CLI tool to execute HTTP requests from YAML collection files.
 
-RESTurant is a lightweight, developer-friendly API testing tool focused on simplicity and CI integration. Define your API requests in YAML and run comprehensive tests from your command line or CI pipeline.
+rqstr is a lightweight API testing tool that lets you define HTTP requests in YAML files and execute them from the command line. Perfect for API testing, monitoring, and CI/CD pipelines.
 
 ## Features
 
-- **Simple CLI Interface**: Test APIs with minimal commands
-- **Declarative Testing**: Define requests and expected responses in YAML
-- **CI-Focused**: Run API tests separately from application code
-- **Automatic Discovery**: Scan directories for test collections
-- **Cross-Platform**: Works on Linux, macOS, and Windows
-
-## Coming Soon
-- Environment variable interpolation in requests
-- Response dumping to files for detailed analysis
-- benchmark endpoints over n requests
+- **Declarative YAML format** - Define requests with clear, readable syntax
+- **Automatic discovery** - Scans directories for `.rest.yml` files
+- **Request validation** - Built-in assertions for status codes and timeouts
+- **Benchmarking support** - Run requests multiple times for performance testing
+- **Environment variables** - Template variables in request definitions
+- **JSON schema validation** - IDE support with autocompletion and validation
+- **Detailed output** - Clear success/failure reporting with timing information
 
 ## Installation
 
 ```bash
-# Install via your package manager of choice
-pip install restaurant-cli
-```
-
-## Command Reference
-
-```
-Usage: RESTaurant COMMAND
-A dead simple CLI to run HTTP requests from a collection file.
-╭─ Commands ─────────────────────────────────────────────────────────────────────────────────────────────╮
-│ gen-schema Generate the schema for the request collection.                                             │
-│ run        Scan for request collections in child dirs and run the requests in them.                    │
-│ --help -h  Display this message and exit.                                                              │
-│ --version  Display application version.                                                                │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+pip install rqstr-cli
 ```
 
 ## Quick Start
 
-1. Create a `.rest.yml` file (e.g. `github.rest.yml`):
+1. Create a `.rest.yml` file:
 
 ```yaml
-# yaml-language-server: $schema=../.request_collection_schema.json
-title: "GitHub API Collection"
-description: "A collection of example requests for the GitHub API"
+title: "API Tests"
 headers:
-  Accept: "application/vnd.github.v3+json"
-  User-Agent: "API-Test-Client"
+  User-Agent: "rqstr-client"
+
 requests:
-  getUserProfile:
+  getUser:
     method: GET
     url: "https://api.github.com/users/octocat"
     assert:
       status_code: 200
-    soft_timeout_s: 3.0
-  getZenMessage:
-    method: GET
-    url: "https://api.github.com/zen"
-    assert:
-      status_code: 200
-  getRepository:
-    method: GET
-    url: "https://api.github.com/repos/octocat/hello-world"
-    assert:
-      status_code: 200
-  searchRepositories:
+      soft_timeout_s: 3.0
+
+  searchRepos:
     method: GET
     url: "https://api.github.com/search/repositories"
-    extra_headers:
-      Accept: "application/vnd.github.v3.text-match+json"
-    body:
-      q: "tetris"
+    query_params:
+      q: "python"
       sort: "stars"
-      order: "desc"
     assert:
       status_code: 200
 ```
 
-2. Run your tests:
+2. Run your requests:
 
 ```bash
-# Run all request collections in the current directory and subdirectories
-restaurant run
+# Run all .rest.yml files in current directory and subdirectories
+rqstr run
+
+# Run specific files
+rqstr run api-tests.rest.yml another-test.rest.yml
+```
+
+## Commands
+
+- `rqstr run [files...]` - Execute request collections
+- `rqstr gen-schema` - Generate JSON schema for YAML validation
+- `rqstr example-collection [name]` - Create example collection file
+
+## YAML Format
+
+```yaml
+# yaml-language-server: $schema=../.rqstr_schema.json
+
+# Collection metadata
+title: "My API Tests"
+description: "Optional description"
+
+# Global headers for all requests
+headers:
+  Accept: "application/json"
+
+# Global Auth for all requests
+auth:
+  token: ${API_TOKEN}
+
+# Request definitions
+requests:
+  requestName:
+    method: GET # HTTP method
+    url: "https://api.example.com" # Request URL
+
+    # Optional: additional headers
+    extra_headers:
+      Content-Type: "application/json"
+
+    # Optional: query parameters
+    query_params:
+      param1: "value"
+      param2: ["multiple", "values"]
+
+    # Optional: JSON body
+    body:
+      key: "value"
+
+    # Optional: assertions
+    assert:
+      status_code: 200 # Expected status code
+      soft_timeout_s: 5.0 # Request timeout
+
+    # Optional: benchmark (run N times)
+    benchmark: 10
+```
+
+## Environment Variables
+
+Use `${VAR_NAME}` syntax to reference environment variables with optional defaults:
+
+```yaml
+headers:
+  Authorization: "Bearer ${API_TOKEN}"
+  Custom-Header: "${CUSTOM_VALUE:-default_value}"
+```
+
+## Schema Validation
+
+Generate a JSON schema for IDE support:
+
+```bash
+rqstr gen-schema > .request_collection_schema.json
+```
+
+Then add to your YAML files:
+
+```yaml
+# yaml-language-server: $schema=./.request_collection_schema.json
+title: "My Collection"
+# ... rest of your configuration
 ```
 
 ## Example Output
 
-When you run the command, RESTurant will scan for `.rest.yml` files and execute the requests in them:
-
 ```
-No input files provided, scanning for files in `/Users/toby/dev/projects/restaurant/**/*.rest.yml`
+$ rqstr do ./examples/*
 Found 4 collection files.
 
-[1/4] Loading /Users/toby/dev/projects/restaurant/resources/github.rest.yml... Done.
-[1/4] GitHub API Collection
-[1/4] Running 4 requests...
-[1/4] ✅ GET      https://api.github.com/users/octocat 200 (0:00:00.199333)
-[1/4] ✅ GET      https://api.github.com/zen 200 (0:00:00.181543)
-[1/4] ✅ GET      https://api.github.com/repos/octocat/hello-world 200 (0:00:00.206547)
-[1/4] ❌ GET      https://api.github.com/search/repositories 422 expected 200  (0:00:00.183207)
+Loading examples/example.rest.yml... Done.
+My API Tests - Running 1 requests... Done.
+ [1/1] - requestName 0/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 0.999s
+ [1/1] - requestName 1/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 1.025s
+ [1/1] - requestName 2/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 0.995s
+ [1/1] - requestName 3/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 1.009s
+ [1/1] - requestName 4/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 1.017s
+ [1/1] - requestName 5/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 1.008s
+ [1/1] - requestName 6/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 0.995s
+ [1/1] - requestName 7/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 0.996s
+ [1/1] - requestName 8/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 0.985s
+ [1/1] - requestName 9/10     | ✅ GET   https://example.com/?param1=value&param2=multiple&param2=values (200) in 1.000s
+Files written to '/Users/toby/dev/projects/rqstr-cli/out/My API Tests/2025-10-03/16:15:22'
 
-[2/4] Loading /Users/toby/dev/projects/restaurant/resources/openweather.rest.yml... Done.
-[2/4] OpenWeatherMap API Collection
-[2/4] Running 3 requests...
-[2/4] ❌ GET      https://api.openweathermap.org/data/2.5/weather 401 expected 200  (0:00:00.122748)
-[2/4] ❌ GET      https://api.openweathermap.org/data/2.5/forecast 401 expected 200  (0:00:00.119949)
-[2/4] ❌ GET      https://api.openweathermap.org/data/2.5/air_pollution 401 expected 200  (0:00:00.127203)
+Loading examples/github.rest.yml... Done.
+Github Requests - Running 4 requests... Done.
+ [1/4] - getUserProfile       | ✅ GET   https://api.github.com/users/octocat (200) in 0.206s
+ [2/4] - getZenMessage        | ✅ GET   https://api.github.com/zen (200) in 0.124s
+ [3/4] - getRepository        | ✅ GET   https://api.github.com/repos/octocat/hello-world (200) in 0.210s
+ [4/4] - searchRepositories   | ❌ GET   https://api.github.com/search/repositories (422) in 0.130s
+Files written to '/Users/toby/dev/projects/rqstr-cli/out/Github Requests/2025-10-03/16:15:22'
 
-[3/4] Loading /Users/toby/dev/projects/restaurant/resources/example.rest.yml... Done.
-[3/4] Basic API Tests Collection
-[3/4] Running 5 requests...
-[3/4] ✅ GET      https://api.ipify.org/ 200 (0:00:00.140074)
-[3/4] ❌ POST     https://api.ipify.org/ 520 expected 403  (0:00:00.350254)
-[3/4] ✅ GET      https://pastebin.com/favicon.ico 200 (0:00:00.081860)
-[3/4] ❌ GET      https://mockbin.org/bin/create 404 expected 2xx  (0:00:00.288823)
-[3/4] ❌ POST     https://postb.in/api/bin 301 expected 200  (0:00:00.077875)
+Loading examples/jsonplaceholder.rest.yml... Done.
+JSON Placeholder API Collection - Running 5 requests... Done.
+ [1/5] - getAllPosts          | ✅ GET   https://jsonplaceholder.typicode.com/posts (200) in 0.361s
+ [2/5] - getSinglePost        | ✅ GET   https://jsonplaceholder.typicode.com/posts/1 (200) in 0.030s
+ [3/5] - createPost           | ✅ POST  https://jsonplaceholder.typicode.com/posts (201) in 0.116s
+ [4/5] - updatePost           | ✅ PUT   https://jsonplaceholder.typicode.com/posts/1 (200) in 0.111s
+ [5/5] - deletePost           | ✅ DELETE https://jsonplaceholder.typicode.com/posts/1 (200) in 0.108s
+Files written to '/Users/toby/dev/projects/rqstr-cli/out/JSON Placeholder API Collection/2025-10-03/16:15:22'
 
-[4/4] Loading /Users/toby/dev/projects/restaurant/resources/jsonplaceholder.rest.yml... Done.
-[4/4] JSON Placeholder API Collection
-[4/4] Running 5 requests...
-[4/4] ✅ GET      https://jsonplaceholder.typicode.com/posts 200 (0:00:00.075812)
-[4/4] ✅ GET      https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.075952)
-[4/4] ✅ POST     https://jsonplaceholder.typicode.com/posts 201 (0:00:00.308094)
-[4/4] ✅ PUT      https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.314894)
-[4/4] ✅ DELETE   https://jsonplaceholder.typicode.com/posts/1 200 (0:00:00.312959)
-
-Some requests failed.
-```
-
-## Configuration File Format
-
-**Schema Generation** - RESTurant can generate a JSON schema for your collection files:
-
-```bash
-# Generate schema
-restaurant gen-schema > .request_collection_schema.json
-```
-
-
-The `.rest.yml` file structure:
-
-```yaml
-# yaml-language-server: $schema=path/to/.request_collection_schema.json
-
-# Collection metadata
-title: "API Collection Title"
-description: "Description of this collection"
-
-# Global headers applied to all requests
-headers:
-  Accept: "application/json"
-  User-Agent: "RESTurant-Client"
-
-# Individual request definitions
-requests:
-  requestName:
-    method: GET                           # HTTP method
-    url: "https://api.example.com/path"   # Full URL
-    extra_headers:                        # Additional headers for this request
-      Authorization: "Bearer token123"
-    body:                                 # Request body (as JSON)
-      key: "value"
-    assert:
-      status_code: 200                    # Expected status code
-    soft_timeout_s: 5.0                   # Timeout in seconds
-```
-
-
-
-This schema can be used with editor extensions like VS Code's YAML Language Server for validation and autocompletion.
-
-## CI Integration
-
-### GitHub Actions Example
-
-```yaml
-# .github/workflows/api-tests.yml
-name: API Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install RESTurant
-        run: pip install restaurant-cli
-      - name: Run API tests
-        run: restaurant run
+Loading examples/openweather.rest.yml... Done.
+OpenWeatherMap API Collection - Running 3 requests... Done.
+ [1/3] - getCurrentWeather    | ❌ GET   https://api.openweathermap.org/data/2.5/weather (401) in 0.146s
+ [2/3] - getForecast          | ❌ GET   https://api.openweathermap.org/data/2.5/forecast (401) in 0.044s
+ [3/3] - getAirPollution      | ❌ GET   https://api.openweathermap.org/data/2.5/air_pollution (401) in 0.046s
+Files written to '/Users/toby/dev/projects/rqstr-cli/out/OpenWeatherMap API Collection/2025-10-03/16:15:22'
 ```
