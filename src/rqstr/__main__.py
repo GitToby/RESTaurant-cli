@@ -1,24 +1,33 @@
+import datetime
 import glob
 import json
 import os
 from pathlib import Path
+from uuid import uuid4
 from cyclopts import App
 from rich import print
 
 from loguru import logger
-from rqstr.schema import HttpResultError, RequestCollection, HttpResult
+from rqstr.const import APP_NAME
 from textwrap import dedent
+from pydantic_settings import BaseSettings
+from rqstr.schema.request import RequestCollection
 
 app = App(
-    name="restaurant",
+    name=APP_NAME,
     help="A dead simple CLI to run HTTP REST requests from a collection file.",
 )
+
+
+class AppConf(BaseSettings):
+    """Settings to control how the internals work"""
+
+    ...
 
 
 @app.command(alias="do")
 async def run(
     input_: list[Path] | None = None,
-    output_dir: Path | None = None,
     fail_on_error: bool = True,
     print_response: bool = True,
 ):
@@ -31,58 +40,19 @@ async def run(
     input_ = [p for p in input_ if p.is_file()]
     print(f"Found {len(input_)} collection files.", end="\n\n")
 
-    requests = []
+    ns = datetime.datetime.now().isoformat()
     for collection_file in input_:
         print(f"Loading {collection_file}...", end=" ")
         rc = RequestCollection.from_yml_file(collection_file)
         print("Done.")
-        print(f"[bold]{rc.title}[/bold]")
-        print(f"Running {len(rc.requests)} requests...")
-        requests = await rc.collect()
-
-        for title, request in requests.items():
-            spacer = ""
-            print(spacer, f"{title} {str(request)}")
-            for k, result in enumerate(request.results):
-                spacer = "  "
-                print(spacer, f"request #{k + 1} {str(result)}")
-
-            if request.benchmark:
-                print(spacer, "Benchmark Results:")
-                print(
-                    spacer,
-                    " ".join(f"{k}: {v}" for k, v in request.benchmark_results.items()),
-                )
-            if print_response:
-                print(
-                    ">>>", f"result #{len(request.results)} of {len(request.results)}"
-                )
-                if isinstance(request.latest_result, HttpResult):
-                    if not isinstance(request.latest_result.response_data, dict):
-                        print(repr(request.latest_result.response_data))
-                    else:
-                        print(request.latest_result.response_data)
-
-                if isinstance(request.latest_result, HttpResultError):
-                    print(request.latest_result.error)
-                print("<<<")
-
+        print(
+            f"[bold]{rc.title}[/bold] - Running {len(rc.requests)} requests...", end=" "
+        )
+        responses = await rc.collect()
+        print("Done.")
+        rc.std_output.write(ns, rc, responses)
+        rc.file_output.write(ns, rc, responses)
         print()
-
-        if output_dir:
-            output_file = output_dir / rc.title / "out.json"
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, "w") as f:
-                _ = f.write(rc.model_dump_json(indent=2))
-
-    # Final Status
-    if any(isinstance(result, HttpResultError) for result in requests):
-        print("[red]Some requests failed.")
-        if fail_on_error:
-            exit(1)
-        exit(0)
-    else:
-        print("[green]All requests succeeded.")
 
 
 @app.command

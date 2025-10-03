@@ -1,10 +1,12 @@
-from rqstr.schema import AuthBasic, HttpResult, RequestCollection
 from conftest import (  # pyright: ignore [reportImplicitRelativeImport]
     RESOURCES_DIR,
 )
 import os
 
 import pytest
+
+from rqstr.schema.auth import AuthBasic
+from rqstr.schema.request import RequestCollection
 
 
 def test__request_collection__init_raw():
@@ -14,20 +16,20 @@ def test__request_collection__init_raw():
 
 
 @pytest.mark.asyncio
-async def test__request_collection__init_file_secrets():
-    os.environ["POSTMAN_PASSWORD"] = "password"
+async def test__request_collection__init_file_secrets(monkeypatch: pytest.MonkeyPatch):
+    pw_value = "my_password"
+    monkeypatch.setenv("POSTMAN_PASSWORD", pw_value)
 
-    collection = RequestCollection.from_yml_file(
-        RESOURCES_DIR / "tests" / "secrets.rest.yml"
-    )
-    assert len(collection.requests) == 1
+    collection = RequestCollection.from_yml_file(RESOURCES_DIR / "secrets.rest.yml")
+    assert len(collection.requests) == 2
 
-    http_basic = collection.requests["basic_env_var"]
+    http_basic = collection.requests["basic env var"]
     assert isinstance(http_basic.auth, AuthBasic)
-    assert http_basic.auth.password.get_secret_value() == "password"
+    assert http_basic.auth.password.get_secret_value() == pw_value
+    
+    defaults_not_set = collection.requests["defaults and not set"]
+    assert defaults_not_set.query_params
+    assert len(defaults_not_set.query_params) == 2
+    assert defaults_not_set.query_params["default_val"] == "12"
+    assert defaults_not_set.query_params["not_set"] is None
 
-    results = await collection.collect()
-    assert len(results) == 1
-    name, res_0 = results.popitem()
-    assert isinstance(res_0, HttpResult)
-    assert res_0.is_success

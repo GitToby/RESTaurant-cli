@@ -16,3 +16,5 @@ live
 *.log
 out
 src/rqstr/_version.py
+.ruff_cache
+.rqstr_schema.json
