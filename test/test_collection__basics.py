@@ -1,7 +1,6 @@
 from conftest import (  # pyright: ignore [reportImplicitRelativeImport]
     RESOURCES_DIR,
 )
-import os
 
 import pytest
 

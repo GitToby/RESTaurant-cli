@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  release:
+    types: [published]
+
+jobs:
+  lint_build_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run ruff check .
+      - run: uv run pytest --cov=src --cov-report=xml --cov-report=term
+
+      - name: Build application
+        run: uv build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-py${{ matrix.python_version }}
+          path: dist/
+
+  release:
+    needs: [lint_build_test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-py3.12 # question: is this bad with just 3.12?
+          path: dist/
+      - name: Publish a Python distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
