@@ -3,13 +3,14 @@ name = "rqstr-cli"
 dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
     "cyclopts>=3.24.0",
     "httpx>=0.28.1",
     "loguru>=0.7.3",
     "piny>=1.1.0",
     "pydantic>=2.11.4",
+    "pydantic-settings>=2.11.0",
 ]
 
 [dependency-groups]
@@ -30,10 +31,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 version_file = "src/rqstr/_version.py"
 
-
 [project.scripts]
 rqstr = "rqstr.__main__:main"
 
 [tool.pyright]
+include = ["src"]
 venvPath = "."
 venv = ".venv"

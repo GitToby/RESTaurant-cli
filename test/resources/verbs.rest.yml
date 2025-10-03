@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../.request_collection_schema.json
+# yaml-language-server: $schema=../../.rqstr_schema.json
 title: Postman Echo Requests - Verbs
 description: >
   Requests that use the Postman Echo API at https://postman-echo.com.

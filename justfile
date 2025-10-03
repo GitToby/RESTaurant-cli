@@ -1,5 +1,7 @@
-api-test:
-    uv run restaurant do examples/*
+init:
+    uv sync
+    uv run rqstr gen-schema > .rqstr_schema.json
 
-test-pw:
-    PASTMAN_PASSWORD=test123 uv run restaurant do examples/tests/secrets.rest.yml
+
+test: init
+    uv run pytest

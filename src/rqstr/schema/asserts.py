@@ -1,5 +1,5 @@
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from rich.markup import escape
 
 
@@ -43,3 +43,8 @@ class AssertDef(_AssertStatusCode, _AssertTimeout):
             "status_code": self.assert_status_code(response),
             # "soft_timeout_s": _AssertTimeout.result(self, response),
         }
+
+
+class HasChecks(BaseModel):
+    check: AssertDef = Field(default_factory=AssertDef, alias="assert")
+    """The tests to check responses against"""

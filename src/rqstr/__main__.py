@@ -6,15 +6,20 @@ from cyclopts import App
 from rich import print
 
 from loguru import logger
-from rqstr.schema import HttpResultError, RequestCollection, HttpResult
+from rqstr.const import APP_NAME
 from textwrap import dedent
+from pydantic_settings import BaseSettings
+from rqstr.schema.request import RequestCollection
 
 app = App(
-    name="restaurant",
+    name=APP_NAME,
     help="A dead simple CLI to run HTTP REST requests from a collection file.",
 )
 
-
+class AppConf(BaseSettings):
+    """Settings to control how the internals work"""
+    ...
+    
 @app.command(alias="do")
 async def run(
     input_: list[Path] | None = None,
