@@ -31,10 +31,16 @@ jobs:
           name: dist-py${{ matrix.python_version }}
           path: dist/
 
+  # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
   release:
     needs: [lint_build_test]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
+    environment:
+      name: pypi
+      url: https://pypi.org/project/rqstr-cli/
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -47,5 +53,3 @@ jobs:
           path: dist/
       - name: Publish a Python distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
