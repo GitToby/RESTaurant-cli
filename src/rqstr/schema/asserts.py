@@ -46,5 +46,5 @@ class AssertDef(_AssertStatusCode, _AssertTimeout):
 
 
 class HasChecks(BaseModel):
-    check: AssertDef = Field(default_factory=AssertDef, alias="assert")
+    check: AssertDef = Field(default_factory=AssertDef)
     """The tests to check responses against"""

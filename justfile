@@ -5,3 +5,6 @@ init:
 
 test: init
     uv run pytest
+
+example:
+    uv run rqstr do ./examples/*
