@@ -3,7 +3,6 @@ import glob
 import json
 import os
 from pathlib import Path
-from uuid import uuid4
 from cyclopts import App
 from rich import print
 

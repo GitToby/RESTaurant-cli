@@ -2,7 +2,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Annotated, Collection, Literal, overload, override
+from typing import Annotated, Literal, overload, override
 import httpx
 from loguru import logger
 from piny import YamlStreamLoader
@@ -11,12 +11,11 @@ from pydantic import (
     Field,
     computed_field,
 )
-from typing_extensions import override
 
 from rqstr.schema.asserts import HasChecks
 from rqstr.schema.auth import HasAuth
 from rqstr.schema.headers import HasHeaders
-from rqstr.schema.output import FileOutput, OutputConf, StdOutOutput
+from rqstr.schema.output import FileOutput, StdOutOutput
 
 
 class RequestData(HasHeaders, HasAuth, HasChecks):

@@ -1,7 +1,6 @@
 import http
 import httpx
 import pytest
-import base64
 from http import HTTPStatus
 from rqstr.schema.auth import AuthBasic
 from rqstr.schema.request import RequestData, ResponseData
